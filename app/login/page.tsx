@@ -1,14 +1,14 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/lib/auth-context"
-import { ArrowRight, Mail, Lock } from "lucide-react"
+import { ArrowRight, Mail, Lock, Loader2, Chrome } from "lucide-react"
+import { signInWithPopup, GoogleAuthProvider } from "firebase/auth"
+import { auth } from "@/lib/firebase" // 👈 Make sure you have firebase initialized
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -18,21 +18,40 @@ export default function LoginPage() {
   const router = useRouter()
   const { login } = useAuth()
 
+  // 🧠 Email/password login
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setLoading(true)
-
     try {
       if (!email || !password) {
-        setError("Email and password are required")
+        setError("Email and password are required.")
         return
       }
 
       await login(email, password)
       router.push("/dashboard")
-    } catch (err) {
+    } catch (err: any) {
+      console.error(err)
       setError("Login failed. Please try again.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 🔹 Google Sign-In
+  const handleGoogleLogin = async () => {
+    setError("")
+    setLoading(true)
+    try {
+      const provider = new GoogleAuthProvider()
+      const result = await signInWithPopup(auth, provider)
+      if (result.user) {
+        router.push("/dashboard")
+      }
+    } catch (err: any) {
+      console.error(err)
+      setError("Google sign-in failed. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -50,7 +69,7 @@ export default function LoginPage() {
         </div>
 
         {/* Form Card */}
-        <div className="bg-card border border-border rounded-xl p-8 space-y-6">
+        <div className="bg-card border border-border rounded-xl p-8 space-y-6 shadow-lg">
           <form onSubmit={handleLogin} className="space-y-4">
             {/* Email */}
             <div>
@@ -89,15 +108,26 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Submit Button */}
+            {/* Submit */}
             <Button
               type="submit"
               disabled={loading}
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-6 text-base font-semibold"
             >
-              {loading ? "Signing in..." : "Sign In"} <ArrowRight className="ml-2 w-5 h-5" />
+              {loading ? <Loader2 className="animate-spin mr-2 h-5 w-5" /> : "Sign In"}
+              <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
           </form>
+
+          {/* Google Sign-In */}
+          <Button
+            variant="outline"
+            onClick={handleGoogleLogin}
+            disabled={loading}
+            className="w-full flex items-center justify-center border-border text-foreground hover:bg-secondary"
+          >
+            <Chrome className="mr-2 w-5 h-5" /> Sign in with Google
+          </Button>
 
           {/* Divider */}
           <div className="relative">
